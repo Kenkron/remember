@@ -2,6 +2,7 @@
 
 import csv
 import sys
+import readline
 
 facts = {}
 
@@ -11,9 +12,9 @@ unknownAnswer="I don't know."
 trueAnswer="Correct"
 falseAnswer="Wrong"
 invalidSentence="That's not a valid sentence"
-sessionExitCode="exit"
+sessionExitCode=["exit","bye","adios"]
 sessionRememberCode="remember"
-instructions="type "+sessionExitCode+" to leave session."
+instructions="type "+sessionExitCode[0]+" to leave session."
 learnSuccessful="Okay"
 learnFailed="I do not understand"
 myReminders="my reminders"
@@ -50,8 +51,7 @@ helpText+="\nyou may view, add to, and forget your reminders just like"
 helpText+="\nanything else"
 helpText+="\n"
 
-def startSession():
-    print (" ".join(sys.argv[1:]))
+def runRemember():
     temp=remember()
     if (temp):
         print("I remember")
@@ -59,13 +59,25 @@ def startSession():
         print("No memories found, making new ones")
     if (myReminders in facts):
         print(consider("what are "+myReminders+"?"))
-    userSentence=""
-    while (userSentence!=sessionExitCode):
-        if (len(userSentence)>0):
-            print(consider(userSentence))
-        userSentence=input()
-    saveMemories()
-        
+    #if there are arguments, just evaluate that argument
+    arguments = (" ".join(sys.argv[1:]))
+    if len(arguments)>0:
+        if (arguments in facts):
+            if arguments[len(arguments)-1]=="s":
+                print(consider("what are "+arguments))
+            else:
+                print (consider("what is "+arguments))
+        else:
+            print (consider(arguments))
+    #else open a session
+    else:
+        userSentence=""
+        while (userSentence not in sessionExitCode):
+            if (len(userSentence)>0):
+                print(consider(userSentence))
+            userSentence=input()
+        saveMemories()
+
 def saveMemories(filename=defaultMemoryFile):
     writer = csv.writer(open(filename, "w"))
     for word, definition in facts.items():
@@ -90,11 +102,13 @@ def remember(filename=defaultMemoryFile):
 def consider(sentence):
     if sentence.lower()=="help":
         return helpText
+    if sentence.lower()=="ls":
+        return ", ".join(facts.keys())
     elif sentence[0:7].lower()=="forget ":
         forgetwords=sentence[7:]
         if "." in forgetwords:
             forgetwords=forgetwords[: forgetwords.index(".")]
-        forget(forgetwords);
+        return forget(forgetwords);
     elif sentence[0:10].lower()=="remind me ":
         if "." in sentence:
             return learn(myReminders+" are "+sentence[10:sentence.index(".")])
@@ -120,7 +134,7 @@ def forget(words):
         if words in facts:
             print("Are you sure you want to forget "+words+"?")
             if (input().lower()=="yes"):
-                print (answer("what is "+words))
+                print (answer("what are "+words))
                 facts.pop(words)
                 return (words+" has been forgotten.")
             else:
@@ -192,4 +206,4 @@ def addGrammar(wordList):
         answer+=(" and "+wordList[len(wordList)-1])
     return answer
 
-startSession()
+runRemember()
