@@ -110,6 +110,8 @@ def consider(sentence):
             forgetwords=forgetwords[: forgetwords.index(".")]
         return forget(forgetwords);
     elif sentence[0:10].lower()=="remind me ":
+        if sentence[10:13]!="to ":
+           sentence=sentence[0:10]+"to "+sentence[10:] 
         if "." in sentence:
             return learn(myReminders+" are "+sentence[10:sentence.index(".")])
         else:
@@ -127,6 +129,8 @@ def consider(sentence):
 
 def forget(words):
     verb=""
+    if words[:3]=="to ":
+        return "You want to forget a reminder"
     for v in beVerbs:
         if " "+v+" " in words:
             verb=" "+v+" "
