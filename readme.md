@@ -8,7 +8,7 @@ This program is designed to help you remember things.  To do this, start by tell
 
 You may also wish to be reminded of things.  To do this, use `remind me` as in `remind me to leave` or `remind me to do the thing`.  Later, when you open this script again, your reminders will be shown to you.  Your reminders are stored just like any other thing under the label `my reminders`. Thus, you may view, add to, and forget your reminders just like anything else.
 
-If you can't remember what it is you are trying to remember, and want to see a big long list of all the facts your program has, ls will list everything it knows.
+If you can't remember what it is you are trying to remember, and want to see a big long list of all the facts your program has, `ls` will list everything it knows.
 
 Commands: 
 ---------
