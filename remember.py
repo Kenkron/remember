@@ -53,9 +53,7 @@ helpText+="\n"
 
 def runRemember():
     temp=remember()
-    if (temp):
-        print("I remember")
-    else:
+    if (not temp):
         print("No memories found, making new ones")
     if (myReminders in facts):
         print(consider("what are "+myReminders+"?"))
@@ -71,12 +69,21 @@ def runRemember():
             print (consider(arguments))
     #else open a session
     else:
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer(completer)
         userSentence=""
         while (userSentence not in sessionExitCode):
             if (len(userSentence)>0):
                 print(consider(userSentence))
             userSentence=input()
         saveMemories()
+
+def completer(text, state):
+    options = [i for i in facts.keys() if i.startswith(text)]
+    if state < len(options):
+        return options[state]
+    else:
+        return None
 
 def saveMemories(filename=defaultMemoryFile):
     writer = csv.writer(open(filename, "w"))
@@ -111,7 +118,7 @@ def consider(sentence):
         return forget(forgetwords);
     elif sentence[0:10].lower()=="remind me ":
         if sentence[10:13]!="to ":
-           sentence=sentence[0:10]+"to "+sentence[10:] 
+            sentence=sentence[0:10]+"to "+sentence[10:]
         if "." in sentence:
             return learn(myReminders+" are "+sentence[10:sentence.index(".")])
         else:
@@ -156,7 +163,7 @@ def forget(words):
                 return "I have not forgotten."
         else:
             return "I already don't know of "+words
-            
+
 
 def learn(words):
     verb=""
@@ -168,7 +175,7 @@ def learn(words):
         verb=" am "
     else:
         return learnFailed
-    
+
     [subject,predicate]=words.split(verb)
     if (subject in facts and not predicate in facts[subject]):
         facts[subject].append(predicate)
@@ -188,10 +195,10 @@ def answer(words):
         return unknownAnswer
 
     [subject,predicate]=words.split(verb)
-    
+
     if (subject.lower() == "what" or subject.lower() == "who"):
         if (predicate in facts):
-            return predicate+verb+addGrammar(facts[predicate])+"." 
+            return predicate+verb+addGrammar(facts[predicate])+"."
         else:
             return unknownAnswer
     else:
