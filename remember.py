@@ -7,6 +7,7 @@ import readline
 facts = {}
 
 beVerbs=["am","are","is"]
+ignoredKeyPrefix=["the ","a "]
 defaultMemoryFile=".rememberFacts.csv"
 unknownAnswer="I don't know."
 trueAnswer="Correct"
@@ -177,6 +178,9 @@ def learn(words):
         return learnFailed
 
     [subject,predicate]=words.split(verb)
+    for pre in ignoredKeyPrefix:
+        if (subject.startswith(pre)):
+            subject=subject[len(pre):]
     if (subject in facts and not predicate in facts[subject]):
         facts[subject].append(predicate)
     else:
@@ -193,12 +197,17 @@ def answer(words):
         verb=" am "
     else:
         return unknownAnswer
-
+    
     [subject,predicate]=words.split(verb)
-
+    
     if (subject.lower() == "what" or subject.lower() == "who"):
+        ignore=""
+        for pre in ignoredKeyPrefix:
+            if (predicate.startswith(pre)):
+                predicate=predicate[len(pre):]
+                ignore=pre
         if (predicate in facts):
-            return predicate+verb+addGrammar(facts[predicate])+"."
+            return ignore+predicate+verb+addGrammar(facts[predicate])+"."
         else:
             return unknownAnswer
     else:
