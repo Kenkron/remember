@@ -138,7 +138,7 @@ def consider(sentence):
 def forget(words):
     verb=""
     if words[:3]=="to ":
-        return "You want to forget a reminder"
+        return forget("my reminders are "+words);
     for v in beVerbs:
         if " "+v+" " in words:
             verb=" "+v+" "
