@@ -159,7 +159,7 @@ def forget(words):
             print("Are you sure you want to forget "+words+"?")
             if input().lower()=="yes":
                 facts[subject].remove(predicate)
-                return (words+"has been forgotten.")
+                return (words+" has been forgotten.")
             else:
                 return "I have not forgotten."
         else:
