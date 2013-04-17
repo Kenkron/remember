@@ -8,6 +8,7 @@ facts = {}
 
 beVerbs=["am","are","is"]
 ignoredKeyPrefix=["the ","a "]
+questionWords=["what","who"]
 defaultMemoryFile=".rememberFacts.csv"
 unknownAnswer="I don't know."
 trueAnswer="Correct"
@@ -72,7 +73,8 @@ def runRemember():
     else:
         readline.parse_and_bind("tab: complete")
         readline.set_completer(completer)
-        userSentence=""
+        readline.set_completer_delims('/n');
+        userSentence=''
         while (userSentence not in sessionExitCode):
             if (len(userSentence)>0):
                 print(consider(userSentence))
@@ -80,7 +82,31 @@ def runRemember():
         saveMemories()
 
 def completer(text, state):
-    options = [i for i in facts.keys() if i.startswith(text)]
+    #options = [i for i in facts.keys() if i.startswith(text)]
+    options = {}
+
+    #handle a forget command autocompete
+    if text.startswith('forget '):
+        forgetfulText=text[len('forget '):]
+        if forgetfulText.startswith('to '):
+            options = ['forget '+i for i in facts[myReminders] if i.startswith(forgetfulText)]
+        else:
+            [fsub,fverb,fpred]=splitSentence(forgetfulText)
+            if len(fverb)==0:
+                options = ['forget '+i for i in facts.keys() if i.startswith(fsub)]
+            else:
+                options = ['forget '+fsub+fverb+i for i in facts[fsub] if i.startswith(fpred)]
+    #handle a non-foget autocomplete
+    else:
+        [sub,verb,pred]=splitSentence(text)
+        if len(verb)==0:
+            #print("no verb");
+            options = [i for i in questionWords if i.startswith(sub)]
+        else:
+            if sub in questionWords:
+                options = [sub+verb+i for i in facts.keys() if i.startswith(pred)]
+            else:
+                options = [sub+verb+i for i in facts[sub] if i.startswith(pred)]
     if state < len(options):
         return options[state]
     else:
@@ -136,12 +162,9 @@ def consider(sentence):
         return learn(words)
 
 def forget(words):
-    verb=""
     if words[:3]=="to ":
         return forget("my reminders are "+words);
-    for v in beVerbs:
-        if " "+v+" " in words:
-            verb=" "+v+" "
+    [subject, verb, predicate]=splitSentence(words)
     if verb=="":
         if words in facts:
             print("Are you sure you want to forget "+words+"?")
@@ -154,7 +177,6 @@ def forget(words):
         else:
             return "I already don't know of "+words
     else:
-        [subject,predicate]=words.split(verb)
         if (subject in facts and predicate in facts[subject]):
             print("Are you sure you want to forget "+words+"?")
             if input().lower()=="yes":
@@ -167,39 +189,26 @@ def forget(words):
 
 
 def learn(words):
-    verb=""
-    if (" is " in words):
-        verb=" is "
-    elif (" are " in words):
-        verb=" are "
-    elif (" am " in words):
-        verb=" am "
-    else:
+    [subject,verb,predicate]=splitSentence(words)
+    if len(verb)==0:
         return learnFailed
-
-    [subject,predicate]=words.split(verb)
     for pre in ignoredKeyPrefix:
         if (subject.startswith(pre)):
             subject=subject[len(pre):]
-    if (subject in facts and not predicate in facts[subject]):
+    if (subject in facts and not predicate in facts[subject] and len(predicate)>0):
         facts[subject].append(predicate)
     else:
-        facts[subject]=[predicate]
+        if len(predicate)>0:
+            facts[subject]=[predicate]
+        else:
+            facts[subject]={}
     saveMemories();
     return learnSuccessful
 
 def answer(words):
-    if (" is " in words):
-        verb=" is "
-    elif (" are " in words):
-        verb=" are "
-    elif (" am " in words):
-        verb=" am "
-    else:
-        return unknownAnswer
-    
-    [subject,predicate]=words.split(verb)
-    
+    [subject,verb,predicate]=splitSentence(words)
+    if len(verb)==0:
+        return learnFailed
     if (subject.lower() == "what" or subject.lower() == "who"):
         ignore=""
         for pre in ignoredKeyPrefix:
@@ -212,11 +221,13 @@ def answer(words):
             return unknownAnswer
     else:
         if (subject in facts and predicate in facts[subject]):
-            return trueAnswer;
+            return trueAnswer
         else:
-            return falseAnswer;
+            return falseAnswer
 
 def addGrammar(wordList):
+    if (len(wordList)==0):
+        return ""
     answer=wordList[0]
     for nextWord in wordList[1:len(wordList)-1]:
         answer+=(", "+nextWord)
@@ -225,5 +236,17 @@ def addGrammar(wordList):
     elif (len(wordList)==2):
         answer+=(" and "+wordList[len(wordList)-1])
     return answer
+
+#splits a sentence with a be verb into a subject, predicate, and verb
+def splitSentence(sentence):
+    verb=''
+    for v in beVerbs:
+        if " "+v+" " in sentence:
+            verb=" "+v+" "
+    if (len(verb)==0):
+        return (sentence,'','')
+    else:
+        [subject,predicate]=sentence.split(verb)
+        return (subject,verb,predicate)
 
 runRemember()
