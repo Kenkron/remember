@@ -2,11 +2,12 @@
 
 import csv
 import sys
+import signal
 import readline
 
 facts = {}
 
-beVerbs=["am","are","is"]
+beVerbs=["am","are","is","be"]
 ignoredKeyPrefix=["the ","a "]
 questionWords=["what","who"]
 defaultMemoryFile=".rememberFacts.csv"
@@ -14,12 +15,13 @@ unknownAnswer="I don't know."
 trueAnswer="Correct"
 falseAnswer="Wrong"
 invalidSentence="That's not a valid sentence"
-sessionExitCode=["exit","bye","adios"]
+sessionExitCode=["exit","bye","goodbye","adios"]
 sessionRememberCode="remember"
 instructions="type "+sessionExitCode[0]+" to leave session."
 learnSuccessful="Okay"
 learnFailed="I do not understand"
 myReminders="my reminders"
+saveConstantly=True;
 helpText="commands: "
 helpText+="\n"
 helpText+="\n[key] is [attribute]."
@@ -33,6 +35,9 @@ helpText+="\n    -discards the key and it's attributes"
 helpText+="\n"
 helpText+="\nremind me [event]."
 helpText+="\n    -adds to the \""+myReminders+"\" key shown at startup"
+helpText+="\n"
+helpText+="\nls"
+helpText+="\n    -prints all of the known facts"
 helpText+="\n"
 helpText+="\n    This program is designed to help you remember things."
 helpText+="\nTo do this, start by telling the program how things are."
@@ -67,8 +72,12 @@ def runRemember():
                 print(consider("what are "+arguments))
             else:
                 print (consider("what is "+arguments))
+        elif arguments[:3]=="to ":
+            print (consider("remind me "+arguments))
+            saveMemories()
         else:
             print (consider(arguments))
+            saveMemories()
     #else open a session
     else:
         readline.parse_and_bind("tab: complete")
@@ -82,26 +91,26 @@ def runRemember():
         saveMemories()
 
 def completer(text, state):
-    #options = [i for i in facts.keys() if i.startswith(text)]
     options = {}
 
     #handle a forget command autocompete
-    if text.startswith('forget '):
+    if text.lower().startswith('forget '):
         forgetfulText=text[len('forget '):]
-        if forgetfulText.startswith('to '):
-            options = ['forget '+i for i in facts[myReminders] if i.startswith(forgetfulText)]
+        if forgetfulText.lower().startswith('to '):
+            options = ['Forget '+i for i in facts[myReminders] if i.startswith(forgetfulText)]
         else:
             [fsub,fverb,fpred]=splitSentence(forgetfulText)
             if len(fverb)==0:
-                options = ['forget '+i for i in facts.keys() if i.startswith(fsub)]
+                options = ['Forget '+i for i in facts.keys() if i.startswith(fsub)]
             else:
-                options = ['forget '+fsub+fverb+i for i in facts[fsub] if i.startswith(fpred)]
+                options = ['Forget '+fsub+fverb+i for i in facts[fsub] if i.startswith(fpred)]
     #handle a non-foget autocomplete
     else:
+        #print(text.lower());
         [sub,verb,pred]=splitSentence(text)
         if len(verb)==0:
-            #print("no verb");
-            options = [i for i in questionWords if i.startswith(sub)]
+            #sets the options to the relavent question words
+            options = [i for i in questionWords if i.lower().startswith(sub)]
         else:
             if sub in questionWords:
                 options = [sub+verb+i for i in facts.keys() if i.startswith(pred)]
@@ -134,27 +143,34 @@ def remember(filename=defaultMemoryFile):
         return False
 
 def consider(sentence):
+    #check for some built in commands first
+    #help
     if sentence.lower()=="help":
         return helpText
-    if sentence.lower()=="ls":
+    #list facts
+    elif sentence.lower()=="ls":
         return ", ".join(facts.keys())
-    elif sentence[0:7].lower()=="forget ":
+    #forget a fact
+    elif sentence.lower().startswith("forget "):
         forgetwords=sentence[7:]
-        if "." in forgetwords:
-            forgetwords=forgetwords[: forgetwords.index(".")]
+        if forgetwords.endswith('.'):
+            forgetwords=forgetwords[:len(forgetwords)-1]
         return forget(forgetwords);
-    elif sentence[0:10].lower()=="remind me ":
+    #add a reminder.  Reminders are forced to begin with "to "
+    elif sentence.startswith("remind me"):
         if sentence[10:13]!="to ":
             sentence=sentence[0:10]+"to "+sentence[10:]
         if "." in sentence:
             return learn(myReminders+" are "+sentence[10:sentence.index(".")])
         else:
             return learn(myReminders+" are "+sentence[10:])
-    elif "?" in sentence or sentence[:5].lower()=="what ":
+    #check for a question
+    elif "?" in sentence or sentence.startswith("what ") or sentence.startswith("who "):
         words=sentence
         if "?" in words:
             words=sentence[: sentence.index("?")]
         return answer(words)
+    #If all else fails, this is a new fact to learn.
     else:
         words=sentence
         if "." in words:
@@ -171,6 +187,8 @@ def forget(words):
             if (input().lower()=="yes"):
                 print (answer("what are "+words))
                 facts.pop(words)
+                if saveConstantly:
+                    saveMemories()
                 return (words+" has been forgotten.")
             else:
                 return "I have not forgotten."
@@ -181,11 +199,13 @@ def forget(words):
             print("Are you sure you want to forget "+words+"?")
             if input().lower()=="yes":
                 facts[subject].remove(predicate)
+                if saveConstantly:
+                    saveMemories()
                 return (words+" has been forgotten.")
             else:
                 return "I have not forgotten."
         else:
-            return "I already don't know of "+words
+            return "I don't know of "+words
 
 
 def learn(words):
@@ -202,7 +222,8 @@ def learn(words):
             facts[subject]=[predicate]
         else:
             facts[subject]={}
-    saveMemories();
+    if saveConstantly:
+        saveMemories();
     return learnSuccessful
 
 def answer(words):
@@ -248,5 +269,11 @@ def splitSentence(sentence):
     else:
         [subject,predicate]=sentence.split(verb)
         return (subject,verb,predicate)
+
+def gracefulClose(signal,frame):
+    saveMemories()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, gracefulClose)
 
 runRemember()
